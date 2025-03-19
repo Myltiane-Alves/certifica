@@ -45,7 +45,7 @@ class PublicKey {
                 this.subjectNameValue = arrayName.join(',');
             }
         } catch (error) {
-            throw CertificateException.unableToOpen();
+            // throw CertificateException.unableToOpen();
         }
     }
 

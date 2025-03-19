@@ -10,9 +10,9 @@ class CertificateException extends Error {
         return new CertificateException(`Impossível ler o certificado, ${this.getOpenSSLError()}`);
     }
 
-    static unableToOpen() {
-        return new CertificateException(`Impossível abrir o certificado, ${this.getOpenSSLError()}`);
-    }
+    // static unableToOpen() {
+    //     return new CertificateException(`Impossível abrir o certificado, ${this.getOpenSSLError()}`);
+    // }
 
     static signContent() {
         return new CertificateException(`Ocorreu um erro inesperado durante o processo de assinatura, ${this.getOpenSSLError()}`);
