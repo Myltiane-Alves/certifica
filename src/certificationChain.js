@@ -1,4 +1,6 @@
-import PublicKey from './PublicKey.js';
+import fs from 'fs';
+import forge from 'node-forge';
+import PublicKey from './publicKey.js';
 
 class CertificationChain {
     constructor(chainkeysstring = null) {
@@ -61,6 +63,29 @@ class CertificationChain {
     rawString() {
         this.rawKey = this.chainKeys.map(publickey => publickey.toString()).join('');
     }
+
+    // New method to load a PFX file
+    loadPFX(pfxPath, password) {
+        const pfxData = fs.readFileSync(pfxPath);
+        const pfx = forge.pkcs12.pkcs12FromAsn1(
+            forge.asn1.fromDer(pfxData.toString('binary')),
+            password
+        );
+
+        pfx.safeContents.forEach(safeContent => {
+            safeContent.safeBags.forEach(safeBag => {
+                if (safeBag.cert) {
+                    const cert = forge.pki.certificateToPem(safeBag.cert);
+                    this.add(cert);
+                }
+            });
+        });
+    }
 }
 
 export default CertificationChain;
+
+// Example usage
+const chain = new CertificationChain();
+chain.loadPFX('GTO 2024-2025.pfx', '#senhagto2024#');
+console.log(chain.listChain());

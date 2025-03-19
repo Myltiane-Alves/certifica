@@ -1,3 +1,5 @@
+import { execSync } from 'child_process';
+
 class CertificateException extends Error {
     constructor(message) {
         super(message);
@@ -25,12 +27,16 @@ class CertificateException extends Error {
     }
 
     static getOpenSSLError() {
-        let error = 'ocorreu o seguinte erro: ';
-        let msg;
-        while (msg = require('child_process').execSync('openssl errstr', { encoding: 'utf-8' })) {
-            error += `(${msg.trim()})`;
+        try {
+            const errorCode = '0D0680A8'; // Replace with a dynamic error code if needed
+            console.log(`Running OpenSSL command: openssl errstr ${errorCode}`);
+            const msg = execSync(`openssl errstr ${errorCode}`, { encoding: 'utf-8' });
+            console.log(`OpenSSL output: ${msg.trim()}`);
+            return `ocorreu o seguinte erro: (${msg.trim()})`;
+        } catch (err) {
+            console.error('Erro ao executar o comando OpenSSL:', err.message);
+            return 'ocorreu um erro desconhecido ao executar o comando OpenSSL.';
         }
-        return error;
     }
 }
 
