@@ -214,21 +214,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const upload = multer({ dest: path.join(__dirname, 'certs/') });
+const upload = multer({ dest: path.join(__dirname, 'temp/') }); // Diretório temporário para uploads
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: '#senhagto2024#', resave: false, saveUninitialized: true }));
 
-app.post('/upload-cert', upload.single('./GTO 2024-2025.pfx'), (req, res) => {
+app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
     if (!req.session.IDLoja || !req.session.IDUsuario) {
         return res.status(403).json({ message: 'Não autorizado' });
     }
-    
+
     const idEmpresa = req.session.IDLoja;
     const IDUser = req.session.IDUsuario;
     const file = req.file;
-    
+
     if (!file) {
         return res.status(400).json({ message: 'Arquivo não enviado' });
     }
@@ -238,23 +238,33 @@ app.post('/upload-cert', upload.single('./GTO 2024-2025.pfx'), (req, res) => {
         return res.status(400).json({ message: 'Por favor, envie um arquivo .pfx válido' });
     }
 
-    const targetPath = path.join(__dirname, 'certs', `${path.parse(file.originalname).name}.pfx`);
-    
+    const targetDir = path.join(__dirname, 'certs');
+    const targetPath = path.join(targetDir, `${path.parse(file.originalname).name}.pfx`);
+
+    // Certifique-se de que o diretório de destino existe
+    if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    // Mover o arquivo para o diretório de destino
     fs.rename(file.path, targetPath, (err) => {
         if (err) {
+            console.error('Erro ao mover o arquivo:', err);
             return res.status(500).json({ message: 'Erro ao mover o arquivo' });
         }
-        
+
+        // Ler o arquivo e convertê-lo para base64
         fs.readFile(targetPath, (err, data) => {
             if (err) {
+                console.error('Erro ao ler o arquivo:', err);
                 return res.status(500).json({ message: 'Erro ao ler o arquivo' });
             }
-            
+
             const base64Cert = data.toString('base64');
-            
+
             res.json({
                 message: 'Certificado carregado com sucesso',
-                base64Cert
+                base64Cert,
             });
         });
     });
@@ -263,3 +273,7 @@ app.post('/upload-cert', upload.single('./GTO 2024-2025.pfx'), (req, res) => {
 app.listen(3000, () => {
     console.log('Servidor rodando na porta 3000');
 });
+
+// console.log('Arquivo recebido:', file);
+// console.log('Caminho temporário:', file.path);
+// console.log('Caminho de destino:', targetPath);
