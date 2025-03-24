@@ -1,12 +1,12 @@
-import express from 'express';
-const app = express();
-const PORT = process.env.PORT || 3001;
-// const PORT =  'http://164.152.244.96:6001';
-// const PORT =  'https://confidencial-api.vercel.app';
+// import express from 'express';
+// const app = express();
+// const PORT = process.env.PORT || 3001;
+// // const PORT =  'http://164.152.244.96:6001';
+// // const PORT =  'https://confidencial-api.vercel.app';
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta `, PORT);
-});
+// app.listen(PORT, () => {
+//   console.log(`Servidor rodando na porta `, PORT);
+// });
 
 
 // import pem from 'pem';
@@ -100,101 +100,166 @@ app.listen(PORT, () => {
 // console.log(`Chave privada salva em: ${keyFilePath}`);
 
 
+// import fs from 'fs';
+// import forge from 'node-forge';
+// import PublicKey from './publicKey.js';
+
+// class CertificationChain {
+//     constructor(chainkeysstring = null) {
+//         this.rawKey = '';
+//         this.chainKeys = [];
+
+//         if (chainkeysstring) {
+//             this.rawKey = chainkeysstring;
+//             this.loadListChain();
+//         }
+//     }
+
+//     add(content) {
+//         if (this.isBinary(content)) {
+//             content = Buffer.from(content, 'binary').toString('base64');
+//             content = content.match(/.{1,64}/g).join('\n');
+//             content = `-----BEGIN CERTIFICATE-----\n${content}\n-----END CERTIFICATE-----\n`;
+//         }
+//         return this.loadList(content);
+//     }
+
+//     isBinary(str) {
+//         return /[^\x20-\x7E\t\r\n]/.test(str);
+//     }
+
+//     removeExpiredCertificates() {
+//         this.chainKeys = this.chainKeys.filter(publickey => !publickey.isExpired());
+//     }
+
+//     listChain() {
+//         return this.chainKeys;
+//     }
+
+//     toString() {
+//         this.rawString();
+//         return this.rawKey;
+//     }
+
+//     getExtraCertsForPFX() {
+//         const ec = this.chainKeys.map(cert => cert.toString());
+//         return ec.length ? { extracerts: ec } : {};
+//     }
+
+//     loadListChain() {
+//         const arr = this.rawKey.split("-----END CERTIFICATE-----");
+//         arr.forEach(a => {
+//             if (a.length > 20) {
+//                 const cert = `${a}-----END CERTIFICATE-----\n`;
+//                 this.loadList(cert);
+//             }
+//         });
+//     }
+
+//     loadList(certificate) {
+//         const publickey = new PublicKey(certificate);
+//         this.chainKeys.push(publickey);
+//         return this.chainKeys;
+//     }
+
+//     rawString() {
+//         this.rawKey = this.chainKeys.map(publickey => publickey.toString()).join('');
+//     }
+
+//     // New method to load a PFX file
+//     loadPFX(pfxPath, password) {
+//         const pfxData = fs.readFileSync(pfxPath);
+//         const pfx = forge.pkcs12.pkcs12FromAsn1(
+//             forge.asn1.fromDer(pfxData.toString('binary')),
+//             password
+//         );
+
+//         pfx.safeContents.forEach(safeContent => {
+//             safeContent.safeBags.forEach(safeBag => {
+//                 if (safeBag.cert) {
+//                     const cert = forge.pki.certificateToPem(safeBag.cert);
+//                     this.add(cert);
+//                 }
+//             });
+//         });
+//     }
+// }
+
+// export default CertificationChain;
+
+// // Example usage
+// const chain = new CertificationChain();
+// // chain.loadPFX('C:/certificadoApi/apiNodejs/GTO 2024-2025.pfx', '#senhagto2024#');
+// // console.log(chain.listChain());
+// const pfxPath = './GTO 2024-2025.pfx';
+// if (!fs.existsSync(pfxPath)) {
+//     console.error(`File not found: ${pfxPath}`);
+//     process.exit(1);
+// }
+
+// chain.loadPFX(pfxPath, '#senhagto2024#');
+
+
+
+
+import express from 'express';
+import multer from 'multer';
 import fs from 'fs';
-import forge from 'node-forge';
-import PublicKey from './publicKey.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import session from 'express-session';
 
-class CertificationChain {
-    constructor(chainkeysstring = null) {
-        this.rawKey = '';
-        this.chainKeys = [];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-        if (chainkeysstring) {
-            this.rawKey = chainkeysstring;
-            this.loadListChain();
+const app = express();
+const upload = multer({ dest: path.join(__dirname, 'certs/') });
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(session({ secret: '#senhagto2024#', resave: false, saveUninitialized: true }));
+
+app.post('/upload-cert', upload.single('./GTO 2024-2025.pfx'), (req, res) => {
+    if (!req.session.IDLoja || !req.session.IDUsuario) {
+        return res.status(403).json({ message: 'Não autorizado' });
+    }
+    
+    const idEmpresa = req.session.IDLoja;
+    const IDUser = req.session.IDUsuario;
+    const file = req.file;
+    
+    if (!file) {
+        return res.status(400).json({ message: 'Arquivo não enviado' });
+    }
+
+    const fileExt = path.extname(file.originalname);
+    if (fileExt !== '.pfx') {
+        return res.status(400).json({ message: 'Por favor, envie um arquivo .pfx válido' });
+    }
+
+    const targetPath = path.join(__dirname, 'certs', `${path.parse(file.originalname).name}.pfx`);
+    
+    fs.rename(file.path, targetPath, (err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Erro ao mover o arquivo' });
         }
-    }
-
-    add(content) {
-        if (this.isBinary(content)) {
-            content = Buffer.from(content, 'binary').toString('base64');
-            content = content.match(/.{1,64}/g).join('\n');
-            content = `-----BEGIN CERTIFICATE-----\n${content}\n-----END CERTIFICATE-----\n`;
-        }
-        return this.loadList(content);
-    }
-
-    isBinary(str) {
-        return /[^\x20-\x7E\t\r\n]/.test(str);
-    }
-
-    removeExpiredCertificates() {
-        this.chainKeys = this.chainKeys.filter(publickey => !publickey.isExpired());
-    }
-
-    listChain() {
-        return this.chainKeys;
-    }
-
-    toString() {
-        this.rawString();
-        return this.rawKey;
-    }
-
-    getExtraCertsForPFX() {
-        const ec = this.chainKeys.map(cert => cert.toString());
-        return ec.length ? { extracerts: ec } : {};
-    }
-
-    loadListChain() {
-        const arr = this.rawKey.split("-----END CERTIFICATE-----");
-        arr.forEach(a => {
-            if (a.length > 20) {
-                const cert = `${a}-----END CERTIFICATE-----\n`;
-                this.loadList(cert);
+        
+        fs.readFile(targetPath, (err, data) => {
+            if (err) {
+                return res.status(500).json({ message: 'Erro ao ler o arquivo' });
             }
-        });
-    }
-
-    loadList(certificate) {
-        const publickey = new PublicKey(certificate);
-        this.chainKeys.push(publickey);
-        return this.chainKeys;
-    }
-
-    rawString() {
-        this.rawKey = this.chainKeys.map(publickey => publickey.toString()).join('');
-    }
-
-    // New method to load a PFX file
-    loadPFX(pfxPath, password) {
-        const pfxData = fs.readFileSync(pfxPath);
-        const pfx = forge.pkcs12.pkcs12FromAsn1(
-            forge.asn1.fromDer(pfxData.toString('binary')),
-            password
-        );
-
-        pfx.safeContents.forEach(safeContent => {
-            safeContent.safeBags.forEach(safeBag => {
-                if (safeBag.cert) {
-                    const cert = forge.pki.certificateToPem(safeBag.cert);
-                    this.add(cert);
-                }
+            
+            const base64Cert = data.toString('base64');
+            
+            res.json({
+                message: 'Certificado carregado com sucesso',
+                base64Cert
             });
         });
-    }
-}
+    });
+});
 
-export default CertificationChain;
-
-// Example usage
-const chain = new CertificationChain();
-// chain.loadPFX('C:/certificadoApi/apiNodejs/GTO 2024-2025.pfx', '#senhagto2024#');
-// console.log(chain.listChain());
-const pfxPath = './GTO 2024-2025.pfx';
-if (!fs.existsSync(pfxPath)) {
-    console.error(`File not found: ${pfxPath}`);
-    process.exit(1);
-}
-
-chain.loadPFX(pfxPath, '#senhagto2024#');
+app.listen(3000, () => {
+    console.log('Servidor rodando na porta 3000');
+});
