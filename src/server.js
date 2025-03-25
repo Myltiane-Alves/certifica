@@ -255,6 +255,7 @@ app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
 
         // Ler o arquivo e convertê-lo para base64
         fs.readFile(targetPath, (err, data) => {
+            console.log('Lendo o arquivo:', targetPath);
             if (err) {
                 console.error('Erro ao ler o arquivo:', err);
                 return res.status(500).json({ message: 'Erro ao ler o arquivo' });
@@ -262,11 +263,11 @@ app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
 
             const base64Cert = data.toString('base64');
 
+            console.log('Base64 do certificado:', base64Cert);
             res.json({
                 message: 'Certificado carregado com sucesso',
                 base64Cert,
             });
-            console.log('Base64 do certificado:', base64Cert);
         });
     });
 });
