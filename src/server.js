@@ -221,55 +221,39 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: '#senhagto2024#', resave: false, saveUninitialized: true }));
 
 app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
-    if (!req.session.IDLoja || !req.session.IDUsuario) {
-        return res.status(403).json({ message: 'Não autorizado' });
-    }
+    // if (!req.session.IDLoja || !req.session.IDUsuario) {
+    //     return res.status(403).json({ message: 'Não autorizado' });
+    // }
 
-    const idEmpresa = req.session.IDLoja;
-    const IDUser = req.session.IDUsuario;
     const file = req.file;
-
     if (!file) {
-        return res.status(400).json({ message: 'Arquivo não enviado' });
+        return res.status(400).json({ message: 'Nenhum arquivo foi enviado' });
     }
 
-    const fileExt = path.extname(file.originalname);
+    // Verifica se a extensão é .pfx (opcional, mas recomendado)
+    const fileExt = path.extname(file.originalname).toLowerCase();
     if (fileExt !== '.pfx') {
+        fs.unlinkSync(file.path); // Remove o arquivo temporário
         return res.status(400).json({ message: 'Por favor, envie um arquivo .pfx válido' });
     }
 
-    const targetDir = path.join(__dirname, 'certs');
-    const targetPath = path.join(targetDir, `${path.parse(file.originalname).name}.pfx`);
-
-    // Certifique-se de que o diretório de destino existe
-    if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-    }
-
-    // Mover o arquivo para o diretório de destino
-    console.log('Lendo o arquivo antes de movee:', targetPath);
-    fs.rename(file.path, targetPath, (err) => {
+    // Lê o arquivo temporário e converte para base64
+    fs.readFile(file.path, (err, data) => {
         if (err) {
-            console.error('Erro ao mover o arquivo:', err);
-            return res.status(500).json({ message: 'Erro ao mover o arquivo' });
+            console.error('Erro ao ler o arquivo:', err);
+            return res.status(500).json({ message: 'Erro ao processar o arquivo' });
         }
 
-        console.log('Lendo o arquivo dora readFile:', targetPath);
-        // Ler o arquivo e convertê-lo para base64
-        fs.readFile(targetPath, (err, data) => {
-            console.log('Lendo o arquivo:', targetPath);
-            if (err) {
-                console.error('Erro ao ler o arquivo:', err);
-                return res.status(500).json({ message: 'Erro ao ler o arquivo' });
-            }
+        const base64Cert = data.toString('base64');
 
-            const base64Cert = data.toString('base64');
-
-            console.log('Base64 do certificado:', base64Cert);
-            res.json({
-                message: 'Certificado carregado com sucesso',
-                base64Cert,
-            });
+        // Remove o arquivo temporário após a leitura
+        fs.unlink(file.path, (unlinkErr) => {
+            if (unlinkErr) console.error('Erro ao remover arquivo temporário:', unlinkErr);
+        });
+        console.log(base64Cert, 'base64Cert');
+        res.json({
+            message: 'Certificado carregado com sucesso',
+            base64Cert: base64Cert
         });
     });
 });
