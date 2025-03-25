@@ -247,12 +247,14 @@ app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
     }
 
     // Mover o arquivo para o diretório de destino
+    console.log('Lendo o arquivo antes de movee:', targetPath);
     fs.rename(file.path, targetPath, (err) => {
         if (err) {
             console.error('Erro ao mover o arquivo:', err);
             return res.status(500).json({ message: 'Erro ao mover o arquivo' });
         }
 
+        console.log('Lendo o arquivo dora readFile:', targetPath);
         // Ler o arquivo e convertê-lo para base64
         fs.readFile(targetPath, (err, data) => {
             console.log('Lendo o arquivo:', targetPath);
