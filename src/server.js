@@ -266,6 +266,7 @@ app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
                 message: 'Certificado carregado com sucesso',
                 base64Cert,
             });
+            console.log('Base64 do certificado:', base64Cert);
         });
     });
 });
@@ -273,7 +274,6 @@ app.post('/upload-cert', upload.single('PATHCERTIFICADO'), (req, res) => {
 app.listen(3000, () => {
     console.log('Servidor rodando na porta 3000');
 });
-
 // console.log('Arquivo recebido:', file);
 // console.log('Caminho temporário:', file.path);
 // console.log('Caminho de destino:', targetPath);
